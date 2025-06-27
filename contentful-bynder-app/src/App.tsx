@@ -65,8 +65,9 @@ useEffect(() => {
         id,
       },
     };
-    setAssetLink(link);
+    // setAssetLink(link);
     fetchAssetMeta(id);
+    sdk.field.setValue(link);
   };
 
   const openEntrySelector = async () => {
@@ -76,17 +77,20 @@ useEffect(() => {
     }
   };
 
+  let assetCreationInitiated = false;
+
   const openNewAsset = async () => {
     console.log('Opening new asset slide-in...');
     const result = await sdk.navigator.openNewAsset({ slideIn: true });
-
+    
     if (!result?.entity?.sys?.id) {
       console.log('No asset was created.');
       return;
     }
 
-    const assetId = result?.entity?.sys?.id;
+    const assetId = result.entity.sys.id;
     console.log('[NewAsset] Created asset ID:', assetId); 
+    assetCreationInitiated = true;
 
     try {
     // ⏳ Wait for asset to be fully processed and published
@@ -94,7 +98,7 @@ useEffect(() => {
     let retries = 10;
 
     while (retries > 0) {
-      asset = await sdk.space.getAsset(assetId);
+      asset = await sdk.cma.asset.get({ assetId });
 
       const file = asset.fields?.file?.['en'];
       const isUploaded = !!file?.url;
@@ -125,7 +129,8 @@ useEffect(() => {
     };
 
     console.log('[NewAsset] Setting field value:', link);
-    sdk.field.setValue(link); // 🔥 This is key!
+
+    await sdk.field.setValue(link); // 🔥 This is key!
 
     // Optional: update local preview (UI)
     setAssetLink(link);
@@ -135,6 +140,10 @@ useEffect(() => {
     console.error('[NewAsset] Failed:', err);
     }
   };
+
+  if (assetCreationInitiated){
+    location.reload();
+  }
 
   const openBynderDialog = async () => {
     const result = await sdk.dialogs.openCurrentApp({
