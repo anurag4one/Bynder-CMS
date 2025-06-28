@@ -1,112 +1,174 @@
-import React, { useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
+import { TextInput, Button } from '@contentful/f36-components';
 import { useSDK } from '@contentful/react-apps-toolkit';
 import type { DialogAppSDK } from '@contentful/app-sdk';
 
-export default function BynderDialog() {
-  const sdk = useSDK<DialogAppSDK>();
-  const [searchTerm, setSearchTerm] = useState('');
-  const [images, setImages] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
+const PAGE_SIZE = 30;
 
+const BynderDialog = () => {
+  const sdk = useSDK<DialogAppSDK>();
   const token = sdk.parameters.instance.bynderToken;
   const domain = sdk.parameters.instance.bynderDomain;
 
-  const handleSearch = async () => {
-    console.log('🔍 Searching Bynder with:', { token, domain, searchTerm });
+  const [query, setQuery] = useState('');
+  const [images, setImages] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [offset, setOffset] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const listRef = useRef<HTMLDivElement>(null);
 
+  const fetchImages = async (search = '', offsetStart = 0) => {
     setLoading(true);
     try {
-      const res = await fetch(
-        `${domain}/api/v4/media/?keyword=${encodeURIComponent(searchTerm)}&type=image&limit=20`,
+      const searchParam = search ? `&name=${encodeURIComponent(search)}` : '';
+      const response = await fetch(
+        `${domain}/api/v4/media/?limit=${PAGE_SIZE}&offset=${offsetStart}${searchParam}`,
         {
-          headers: { Authorization: `Bearer ${token}` },
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
         }
       );
 
-      console.log('🌐 Response status:', res.status);
-      console.log('🌐 Response:', res);
-      if (!res.ok) {
-        const errorText = await res.text();
-        console.error('❌ Search failed:', errorText);
-        return;
+      const data = await response.json();
+      const newImages = Array.isArray(data) ? data : [];
+
+      setImages((prev) => [...prev, ...newImages]);
+      setOffset(offsetStart + PAGE_SIZE);
+      if (newImages.length < PAGE_SIZE) {
+        setHasMore(false);
       }
-
-      const rawData = await res.json();
-      console.log('✅ Raw data:', rawData);
-
-      const parsedImages = rawData.map((item: any) => ({
-        id: item.id,
-        name: item.name,
-        thumbnail:
-          item.thumbnails?.webimage ||
-          item.derivatives?.webImage?.url ||
-          '',
-        originalUrl: item.originalUrl || '',
-      }));
-
-      console.log('🖼️ Parsed images:', parsedImages);
-      setImages(parsedImages);
-    } catch (err) {
-      console.error('🛑 Error during search:', err);
+    } catch (e) {
+      console.error('❌ Error fetching Bynder assets:', e);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSelect = (img: any) => {
-    console.log('📌 Selected media ID:', img.id);
+  useEffect(() => {
+    fetchImages();
+  }, []);
+
+  // Infinite scroll logic
+  useEffect(() => {
+    const handleScroll = () => {
+      const container = listRef.current;
+      if (!container || loading || !hasMore) return;
+
+      const { scrollTop, scrollHeight, clientHeight } = container;
+      console.log('[scroll]', { scrollTop, scrollHeight, clientHeight });
+
+      if (scrollTop + clientHeight >= scrollHeight - 100) {
+        fetchImages(query, offset);
+      }
+    };
+
+    const container = listRef.current;
+    if (container) container.addEventListener('scroll', handleScroll);
+    return () => {
+      if (container) container.removeEventListener('scroll', handleScroll);
+    };
+  }, [loading, hasMore, offset, query]);
+
+  const handleSearch = () => {
+    setImages([]);
+    setOffset(0);
+    setHasMore(true);
+    fetchImages(query, 0);
+  };
+
+  const selectImage = (img: any) => {
     sdk.close({
       id: img.id,
       name: img.name,
-      originalUrl: img.originalUrl,
-      thumbnail: img.thumbnail,
+      originalUrl: img.originalUrl || img.original?.url,
+      thumbnail: img.thumbnail || img.thumbnails?.webimage,
     });
   };
 
-
   return (
-    <div style={{ padding: 20 }}>
-      <div style={{ display: 'flex', gap: 8 }}>
-        <input
+    <div style={{ padding: 16, height: '600px', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ marginBottom: 12, display: 'flex' }}>
+        <TextInput
           placeholder="Search images..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          style={{ flex: 1, padding: '8px', fontSize: '16px' }}
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
         />
-        <button onClick={handleSearch} disabled={loading}>
-          {loading ? 'Searching...' : 'Search'}
-        </button>
+        <Button onClick={handleSearch} style={{ marginLeft: 8 }}>Search</Button>
       </div>
 
       <div
+        ref={listRef}
         style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))',
-          gap: 12,
-          marginTop: 20,
+          flex: 1,
+          overflowY: 'auto',
+          border: '1px solid #ccc',
+          borderRadius: 4,
+          padding: 8,
+          height: '100%',
+          minHeight: 200,
         }}
       >
-        {!loading && searchTerm.trim() !== '' && images.length === 0 && (
-          <p style={{ gridColumn: '1 / -1', textAlign: 'center' }}>No results found</p>
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))',
+            gap: '12px',
+          }}
+        >
+          {images.map((img, i) => (
+            <div
+              key={img.id || i}
+              onClick={() => selectImage(img)}
+              style={{
+                cursor: 'pointer',
+                border: '1px solid #e2e2e2',
+                borderRadius: '6px',
+                padding: '6px',
+                textAlign: 'center',
+                backgroundColor: '#fff',
+                boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.boxShadow = '0 0 4px rgba(0, 153, 255, 0.4)';
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.boxShadow = '0 1px 2px rgba(0,0,0,0.05)';
+              }}
+            >
+              <img
+                src={img.thumbnail || img.thumbnails?.webimage}
+                alt={img.name}
+                style={{
+                  width: '100%',
+                  height: '80px',
+                  objectFit: 'cover',
+                  borderRadius: '4px',
+                  marginBottom: '6px',
+                }}
+              />
+              <div
+                style={{
+                  fontSize: '12px',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}
+                title={img.name}
+              >
+                {img.name}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {loading && <div style={{ padding: 12, textAlign: 'center' }}>Loading...</div>}
+        {!loading && !hasMore && images.length > 0 && (
+          <div style={{ padding: 12, textAlign: 'center', color: '#999' }}>No more images</div>
         )}
-        {images.map((img) => (
-          <img
-            key={img.id}
-            src={
-              img.thumbnail ||
-              'https://via.placeholder.com/150?text=No+Thumbnail'
-            }
-            alt={img.name}
-            style={{
-              width: '100%',
-              cursor: 'pointer',
-              borderRadius: 8,
-              boxShadow: '0 2px 6px rgba(0,0,0,0.1)',
-            }}
-            onClick={() => handleSelect(img)}
-          />
-        ))}
       </div>
     </div>
   );
-}
+};
+
+export default BynderDialog;
