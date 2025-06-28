@@ -23,6 +23,10 @@ const App = () => {
   const [loading, setLoading] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
 
+  useEffect(() => {
+    sdk.window.startAutoResizer();
+  }, []);
+
   const fetchAssetMeta = async (id: string) => {
     try {
       setLoading(true);
@@ -143,20 +147,31 @@ const App = () => {
   };
 
   const renderImagePreview = (src: string, alt?: string) => (
-    <div style={{ width: '100%', textAlign: 'center', position: 'relative' }}>
+    <div
+      style={{
+        width: 240,
+        height: 160,
+        position: 'relative',
+        border: '1px solid #d3dce0',
+        borderRadius: '4px',
+        padding: '4px',
+        background: '#fff',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        overflow: 'hidden',
+      }}
+    >
       <img
         src={src}
         alt={alt || 'Selected Image'}
         style={{
           maxWidth: '100%',
-          height: 'auto',
-          borderRadius: '8px',
-          marginBottom: '0.5rem',
+          maxHeight: '100%',
+          objectFit: 'contain',
         }}
-        onLoad={() => sdk.window.updateHeight()}
       />
-
-      <div style={{ position: 'absolute', top: '8px', right: '8px' }}>
+      <div style={{ position: 'absolute', top: '4px', right: '4px' }}>
         <Popover
           isOpen={isMenuOpen}
           onClose={() => setIsMenuOpen(false)}
@@ -186,18 +201,7 @@ const App = () => {
   );
 
   return (
-    <div
-      style={{
-        display: 'flex',
-        justifyContent: 'center',
-        padding: '1rem',
-        border: '2px dashed #ccc',
-        borderRadius: '12px',
-        alignItems: 'center',
-        flexDirection: 'column',
-        width: '100%',
-      }}
-    >
+    <div style={{ padding: 0, margin: 0, width: 'auto', overflow: 'visible' }}>
       {!assetMeta && !bynderAsset && (
         <Popover
           isOpen={isMenuOpen}
