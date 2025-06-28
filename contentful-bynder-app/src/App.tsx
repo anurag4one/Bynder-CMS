@@ -7,20 +7,18 @@ import {
   MenuItem,
   Button,
   Popover,
-  Text,
+  IconButton,
   Spinner,
 } from '@contentful/f36-components';
+import { MoreHorizontalIcon } from '@contentful/f36-icons';
 import { useRef, useState, useEffect } from 'react';
-import type { FieldAppSDK, Link, Asset } from '@contentful/app-sdk';
+import type { FieldAppSDK, Link } from '@contentful/app-sdk';
 
 const App = () => {
   const sdk = useSDK<FieldAppSDK>();
   const [assetLink, setAssetLink] = useFieldValue<Link>();
-  type AssetMeta = {
-    id: string;
-    thumbnailUrl: string;
-  };
-  const [assetMeta, setAssetMeta] = useState<AssetMeta | null>(null);
+  const [assetMeta, setAssetMeta] = useState<any>(null);
+  const [bynderAsset, setBynderAsset] = useState<any>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -35,7 +33,7 @@ const App = () => {
       if (file?.url) {
         setAssetMeta({
           id,
-          thumbnailUrl: `https:${file.url}?w=300&h=200&fit=thumb`,
+          url: `https:${file.url}`,
         });
       } else {
         setAssetMeta(null);
@@ -56,6 +54,17 @@ const App = () => {
     }
   }, [assetLink]);
 
+  useEffect(() => {
+    const currentValue = sdk.field.getValue();
+    setBynderAsset(currentValue);
+
+    const detach = sdk.field.onValueChanged((newValue) => {
+      setBynderAsset(newValue);
+    });
+
+    return () => detach();
+  }, []);
+
   const selectAsset = (id: string) => {
     const link: Link = {
       sys: {
@@ -75,15 +84,11 @@ const App = () => {
     }
   };
 
-  let assetCreationInitiated = false;
-
   const openNewAsset = async () => {
     const result = await sdk.navigator.openNewAsset({ slideIn: true });
     if (!result?.entity?.sys?.id) return;
 
     const assetId = result.entity.sys.id;
-    assetCreationInitiated = true;
-
     try {
       let asset;
       let retries = 10;
@@ -93,7 +98,6 @@ const App = () => {
         const file = asset.fields?.file?.['en'];
         const isUploaded = !!file?.url;
         const isPublished = !!asset.sys.publishedVersion;
-
         if (isUploaded && isPublished) break;
         await new Promise((res) => setTimeout(res, 1000));
         retries--;
@@ -117,10 +121,6 @@ const App = () => {
     }
   };
 
-  if (assetCreationInitiated) {
-    location.reload();
-  }
-
   const openBynderDialog = async () => {
     const result = await sdk.dialogs.openCurrentApp({
       width: 800,
@@ -136,23 +136,54 @@ const App = () => {
     }
   };
 
-  const [bynderAsset, setBynderAsset] = useState<any>(null);
-
-  useEffect(() => {
-    const currentValue = sdk.field.getValue();
-    setBynderAsset(currentValue);
-
-    const detach = sdk.field.onValueChanged((newValue) => {
-      setBynderAsset(newValue);
-    });
-
-    return () => detach(); // clean up listener on unmount
-  }, []);
-
-  const clearBynder = () => {
+  const removeAsset = () => {
     sdk.field.removeValue();
     setBynderAsset(null);
+    setAssetMeta(null);
   };
+
+  const renderImagePreview = (src: string, alt?: string) => (
+    <div style={{ width: '100%', textAlign: 'center', position: 'relative' }}>
+      <img
+        src={src}
+        alt={alt || 'Selected Image'}
+        style={{
+          maxWidth: '100%',
+          height: 'auto',
+          borderRadius: '8px',
+          marginBottom: '0.5rem',
+        }}
+        onLoad={() => sdk.window.updateHeight()}
+      />
+
+      <div style={{ position: 'absolute', top: '8px', right: '8px' }}>
+        <Popover
+          isOpen={isMenuOpen}
+          onClose={() => setIsMenuOpen(false)}
+          placement="bottom-end"
+        >
+          <Popover.Trigger>
+            <IconButton
+              variant="transparent"
+              icon={<MoreHorizontalIcon />}
+              aria-label="Options"
+              onClick={() => setIsMenuOpen((prev) => !prev)}
+            />
+          </Popover.Trigger>
+          <Popover.Content>
+            <Menu>
+              <MenuItem onClick={() => { setIsMenuOpen(false); openBynderDialog(); }}>
+                Replace image
+              </MenuItem>
+              <MenuItem onClick={() => { setIsMenuOpen(false); removeAsset(); }}>
+                Remove image
+              </MenuItem>
+            </Menu>
+          </Popover.Content>
+        </Popover>
+      </div>
+    </div>
+  );
 
   return (
     <div
@@ -163,12 +194,16 @@ const App = () => {
         border: '2px dashed #ccc',
         borderRadius: '12px',
         alignItems: 'center',
-        height: '80vh',
         flexDirection: 'column',
+        width: '100%',
       }}
     >
       {!assetMeta && !bynderAsset && (
-        <Popover isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} placement="bottom-start">
+        <Popover
+          isOpen={isMenuOpen}
+          onClose={() => setIsMenuOpen(false)}
+          placement="bottom-start"
+        >
           <Popover.Trigger>
             <Button
               variant="secondary"
@@ -196,41 +231,8 @@ const App = () => {
 
       {loading && <Spinner size="large" style={{ marginTop: '1rem' }} />}
 
-      {assetMeta && (
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-          <img
-            src={assetMeta.thumbnailUrl}
-            alt="Asset"
-            style={{ maxWidth: '300px', maxHeight: '200px', marginBottom: '0.5rem' }}
-          />
-          <Button
-            variant="negative"
-            size="small"
-            onClick={() => {
-              sdk.field.removeValue();
-              setAssetMeta(null);
-            }}>
-            Remove media
-          </Button>
-        </div>
-      )}
-
-      {bynderAsset?.thumbnail && (
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-          <img
-            src={bynderAsset.thumbnail}
-            alt={bynderAsset.name}
-            style={{ maxWidth: '300px', maxHeight: '200px', marginBottom: '0.5rem' }}
-          />
-          <p style={{ fontSize: 14 }}>{bynderAsset.name}</p>
-          <Button variant="secondary" onClick={openBynderDialog} style={{ marginBottom: 8 }}>
-            Replace Bynder Image
-          </Button>
-          <Button variant="negative" onClick={clearBynder}>
-            Remove Bynder Image
-          </Button>
-        </div>
-      )}
+      {assetMeta?.url && renderImagePreview(assetMeta.url)}
+      {bynderAsset?.thumbnail && renderImagePreview(bynderAsset.thumbnail, bynderAsset.name)}
     </div>
   );
 };
