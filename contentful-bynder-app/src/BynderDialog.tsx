@@ -49,15 +49,12 @@ const BynderDialog = () => {
     fetchImages();
   }, []);
 
-  // Infinite scroll logic
   useEffect(() => {
     const handleScroll = () => {
       const container = listRef.current;
       if (!container || loading || !hasMore) return;
 
       const { scrollTop, scrollHeight, clientHeight } = container;
-      console.log('[scroll]', { scrollTop, scrollHeight, clientHeight });
-
       if (scrollTop + clientHeight >= scrollHeight - 100) {
         fetchImages(query, offset);
       }
@@ -78,11 +75,14 @@ const BynderDialog = () => {
   };
 
   const selectImage = (img: any) => {
+    const thumbnail = img.thumbnails?.webimage;
+    const originalUrl = thumbnail;
+
     sdk.close({
       id: img.id,
       name: img.name,
-      originalUrl: img.originalUrl || img.original?.url,
-      thumbnail: img.thumbnail || img.thumbnails?.webimage,
+      thumbnail,
+      originalUrl,
     });
   };
 

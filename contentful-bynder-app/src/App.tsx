@@ -16,7 +16,7 @@ import type { FieldAppSDK, Link, Asset } from '@contentful/app-sdk';
 const App = () => {
   const sdk = useSDK<FieldAppSDK>();
   const [assetLink, setAssetLink] = useFieldValue<Link>();
-    type AssetMeta = {
+  type AssetMeta = {
     id: string;
     thumbnailUrl: string;
   };
@@ -26,36 +26,35 @@ const App = () => {
   const buttonRef = useRef<HTMLButtonElement>(null);
 
   const fetchAssetMeta = async (id: string) => {
-  try {
-    setLoading(true);
-    const asset = await sdk.cma.asset.get({ assetId: id });
-    const locale = sdk.field.locale;
-    const file = asset.fields.file?.[locale];
+    try {
+      setLoading(true);
+      const asset = await sdk.cma.asset.get({ assetId: id });
+      const locale = sdk.field.locale;
+      const file = asset.fields.file?.[locale];
 
-    if (file?.url) {
-      setAssetMeta({
-        id,
-        thumbnailUrl: `https:${file.url}?w=300&h=200&fit=thumb`,
-      });
+      if (file?.url) {
+        setAssetMeta({
+          id,
+          thumbnailUrl: `https:${file.url}?w=300&h=200&fit=thumb`,
+        });
+      } else {
+        setAssetMeta(null);
+      }
+    } catch (err) {
+      console.error('[Asset Fetch Error]', err);
+      setAssetMeta(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (assetLink?.sys?.id) {
+      fetchAssetMeta(assetLink.sys.id);
     } else {
       setAssetMeta(null);
     }
-  } catch (err) {
-    console.error('[Asset Fetch Error]', err);
-    setAssetMeta(null);
-  } finally {
-    setLoading(false);
-  }
-};
-
-useEffect(() => {
-  if (assetLink?.sys?.id) {
-    fetchAssetMeta(assetLink.sys.id);
-  } else {
-    setAssetMeta(null);
-  }
-}, [assetLink]);
-
+  }, [assetLink]);
 
   const selectAsset = (id: string) => {
     const link: Link = {
@@ -65,7 +64,6 @@ useEffect(() => {
         id,
       },
     };
-    // setAssetLink(link);
     fetchAssetMeta(id);
     sdk.field.setValue(link);
   };
@@ -80,68 +78,46 @@ useEffect(() => {
   let assetCreationInitiated = false;
 
   const openNewAsset = async () => {
-    console.log('Opening new asset slide-in...');
     const result = await sdk.navigator.openNewAsset({ slideIn: true });
-    
-    if (!result?.entity?.sys?.id) {
-      console.log('No asset was created.');
-      return;
-    }
+    if (!result?.entity?.sys?.id) return;
 
     const assetId = result.entity.sys.id;
-    console.log('[NewAsset] Created asset ID:', assetId); 
     assetCreationInitiated = true;
 
     try {
-    // ⏳ Wait for asset to be fully processed and published
-    let asset;
-    let retries = 10;
+      let asset;
+      let retries = 10;
 
-    while (retries > 0) {
-      asset = await sdk.cma.asset.get({ assetId });
+      while (retries > 0) {
+        asset = await sdk.cma.asset.get({ assetId });
+        const file = asset.fields?.file?.['en'];
+        const isUploaded = !!file?.url;
+        const isPublished = !!asset.sys.publishedVersion;
 
-      const file = asset.fields?.file?.['en'];
-      const isUploaded = !!file?.url;
-      const isPublished = !!asset.sys.publishedVersion;
-
-      console.log(`[Polling] Uploaded: ${isUploaded}, Published: ${isPublished}`);
-
-      if (isUploaded && isPublished) {
-        break;
+        if (isUploaded && isPublished) break;
+        await new Promise((res) => setTimeout(res, 1000));
+        retries--;
       }
 
-      await new Promise((res) => setTimeout(res, 1000));
-      retries--;
-    }
+      if (!asset) return;
 
-    if (!asset) {
-      console.warn('[NewAsset] Asset not found or not ready.');
-      return;
-    }
+      const link: Link = {
+        sys: {
+          type: 'Link',
+          linkType: 'Asset',
+          id: assetId,
+        },
+      };
 
-    // ✅ Now assign to field
-    const link: Link = {
-      sys: {
-        type: 'Link',
-        linkType: 'Asset',
-        id: assetId,
-      },
-    };
-
-    console.log('[NewAsset] Setting field value:', link);
-
-    await sdk.field.setValue(link); // 🔥 This is key!
-
-    // Optional: update local preview (UI)
-    setAssetLink(link);
-    await fetchAssetMeta(assetId);
-
+      await sdk.field.setValue(link);
+      setAssetLink(link);
+      await fetchAssetMeta(assetId);
     } catch (err) {
-    console.error('[NewAsset] Failed:', err);
+      console.error('[NewAsset] Failed:', err);
     }
   };
 
-  if (assetCreationInitiated){
+  if (assetCreationInitiated) {
     location.reload();
   }
 
@@ -152,20 +128,30 @@ useEffect(() => {
       title: 'Select Asset from Bynder',
     });
 
-    if (result && result.id) {
-      console.log('📦 Received Bynder asset:', result); // Logs ID, name, originalUrl, etc.
-      
-      // 🚧 Next step: Use `result.originalUrl` with Bynder's download API
-      // const createdAssetId = await createAssetFromBynder(result);
-      // selectAsset(createdAssetId);
+    if (result?.originalUrl) {
+      sdk.field.setValue(result);
+      setBynderAsset(result);
+    } else {
+      sdk.notifier.error('No image selected from Bynder.');
     }
   };
 
-  // 🔧 Stub: Replace this with actual Bynder import logic if you already have one
-  const createAssetFromBynder = async (imageUrl: string): Promise<string> => {
-    // TEMP: just logs and throws
-    console.warn('⚠️ Implement logic to upload Bynder image to Contentful:', imageUrl);
-    throw new Error('createAssetFromBynder not implemented');
+  const [bynderAsset, setBynderAsset] = useState<any>(null);
+
+  useEffect(() => {
+    const currentValue = sdk.field.getValue();
+    setBynderAsset(currentValue);
+
+    const detach = sdk.field.onValueChanged((newValue) => {
+      setBynderAsset(newValue);
+    });
+
+    return () => detach(); // clean up listener on unmount
+  }, []);
+
+  const clearBynder = () => {
+    sdk.field.removeValue();
+    setBynderAsset(null);
   };
 
   return (
@@ -181,30 +167,31 @@ useEffect(() => {
         flexDirection: 'column',
       }}
     >
-    {!assetMeta && (  <Popover isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} placement="bottom-start">
-        <Popover.Trigger>
-          <Button
-            variant="secondary"
-            onClick={() => setIsMenuOpen((open) => !open)}
-            ref={buttonRef}
-          >
-            + Add media ▾
-          </Button>
-        </Popover.Trigger>
-        <Popover.Content>
-          <Menu>
-            <MenuItem onClick={() => { setIsMenuOpen(false); openEntrySelector(); }}>
-              Add existing media
-            </MenuItem>
-            <MenuItem onClick={() => { setIsMenuOpen(false); openNewAsset(); }}>
-              Add new media
-            </MenuItem>
-            <MenuItem onClick={() => { setIsMenuOpen(false); openBynderDialog(); }}>
-              Import from Bynder
-            </MenuItem>
-          </Menu>
-        </Popover.Content>
-      </Popover>
+      {!assetMeta && !bynderAsset && (
+        <Popover isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} placement="bottom-start">
+          <Popover.Trigger>
+            <Button
+              variant="secondary"
+              onClick={() => setIsMenuOpen((open) => !open)}
+              ref={buttonRef}
+            >
+              + Add media ▾
+            </Button>
+          </Popover.Trigger>
+          <Popover.Content>
+            <Menu>
+              <MenuItem onClick={() => { setIsMenuOpen(false); openEntrySelector(); }}>
+                Add existing media
+              </MenuItem>
+              <MenuItem onClick={() => { setIsMenuOpen(false); openNewAsset(); }}>
+                Add new media
+              </MenuItem>
+              <MenuItem onClick={() => { setIsMenuOpen(false); openBynderDialog(); }}>
+                Import from Bynder
+              </MenuItem>
+            </Menu>
+          </Popover.Content>
+        </Popover>
       )}
 
       {loading && <Spinner size="large" style={{ marginTop: '1rem' }} />}
@@ -224,6 +211,23 @@ useEffect(() => {
               setAssetMeta(null);
             }}>
             Remove media
+          </Button>
+        </div>
+      )}
+
+      {bynderAsset?.thumbnail && (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <img
+            src={bynderAsset.thumbnail}
+            alt={bynderAsset.name}
+            style={{ maxWidth: '300px', maxHeight: '200px', marginBottom: '0.5rem' }}
+          />
+          <p style={{ fontSize: 14 }}>{bynderAsset.name}</p>
+          <Button variant="secondary" onClick={openBynderDialog} style={{ marginBottom: 8 }}>
+            Replace Bynder Image
+          </Button>
+          <Button variant="negative" onClick={clearBynder}>
+            Remove Bynder Image
           </Button>
         </div>
       )}
