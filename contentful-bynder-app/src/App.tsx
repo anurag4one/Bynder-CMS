@@ -35,14 +35,15 @@ const App = () => {
       const locale = sdk.field.locale;
       const file = asset.fields.file?.[locale];
 
-      if (file?.url) {
-        setAssetMeta({
-          id,
-          url: `https:${file.url}`,
-        });
-      } else {
-        setAssetMeta(null);
-      }
+      const thumbnailUrl = file?.url ? `https:${file.url}` : null;
+
+      // Always store the asset ID and optionally the URL
+      setAssetMeta({
+        id,
+        url: thumbnailUrl,
+        title: asset.fields?.title?.[locale] || 'Untitled Asset',
+        hasFile: !!thumbnailUrl,
+      });
     } catch (err) {
       console.error('[Asset Fetch Error]', err);
       setAssetMeta(null);
@@ -50,6 +51,7 @@ const App = () => {
       setLoading(false);
     }
   };
+
 
   useEffect(() => {
     if (assetLink?.sys?.id) {
@@ -85,46 +87,40 @@ const App = () => {
   const openEntrySelector = async () => {
     const result = await sdk.dialogs.selectSingleAsset();
     if (result?.sys?.id) {
-      selectAsset(result.sys.id);
+      try {
+        const asset = await sdk.cma.asset.get({ assetId: result.sys.id });
+        if (asset) {
+          selectAsset(result.sys.id);
+        }
+      } catch (err) {
+        console.error('Selected asset not found or inaccessible:', err);
+        sdk.notifier.error('Selected media not found or was deleted.');
+      }
     }
   };
+
 
   const openNewAsset = async () => {
     const result = await sdk.navigator.openNewAsset({ slideIn: true });
-    if (!result?.entity?.sys?.id) return;
+    const assetId = result?.entity?.sys?.id;
 
-    const assetId = result.entity.sys.id;
-    try {
-      let asset;
-      let retries = 10;
-
-      while (retries > 0) {
-        asset = await sdk.cma.asset.get({ assetId });
-        const file = asset.fields?.file?.['en'];
-        const isUploaded = !!file?.url;
-        const isPublished = !!asset.sys.publishedVersion;
-        if (isUploaded && isPublished) break;
-        await new Promise((res) => setTimeout(res, 1000));
-        retries--;
-      }
-
-      if (!asset) return;
-
-      const link: Link = {
-        sys: {
-          type: 'Link',
-          linkType: 'Asset',
-          id: assetId,
-        },
-      };
-
-      await sdk.field.setValue(link);
-      setAssetLink(link);
-      await fetchAssetMeta(assetId);
-    } catch (err) {
-      console.error('[NewAsset] Failed:', err);
+    if (!assetId) {
+      console.log('Asset creation cancelled or not completed.');
+      return;
     }
+      if (assetId) {
+        try {
+          const asset = await sdk.cma.asset.get({ assetId: assetId });
+          if (asset) {
+            selectAsset(assetId);
+          }
+        } catch (err) {
+          console.error('Selected asset not found or inaccessible:', err);
+          sdk.notifier.error('Selected media not found or was deleted.');
+        }
+      }
   };
+
 
   const openBynderDialog = async () => {
     const result = await sdk.dialogs.openCurrentApp({
@@ -147,7 +143,11 @@ const App = () => {
     setAssetMeta(null);
   };
 
-  const renderImagePreview = (src: string, alt?: string) => (
+  const renderImagePreview = (
+    src: string | null,
+    alt?: string,
+    options?: { showReload?: boolean; onReload?: () => void }
+  ) => (
     <div
       style={{
         width: 240,
@@ -158,20 +158,40 @@ const App = () => {
         padding: '4px',
         background: '#fff',
         display: 'flex',
-        alignItems: 'center',
+        flexDirection: 'column',
         justifyContent: 'center',
+        alignItems: 'center',
         overflow: 'hidden',
+        textAlign: 'center',
       }}
     >
-      <img
-        src={src}
-        alt={alt || 'Selected Image'}
-        style={{
-          maxWidth: '100%',
-          maxHeight: '100%',
-          objectFit: 'contain',
-        }}
-      />
+      {options?.showReload && options?.onReload && (
+        <Button
+          size="small"
+          variant="secondary"
+          onClick={options.onReload}
+          style={{ marginBottom: '0.5rem' }}
+        >
+          🔄 Reload
+        </Button>
+      )}
+
+      {src ? (
+        <img
+          src={src}
+          alt={alt || 'Selected Image'}
+          style={{
+            maxWidth: '100%',
+            maxHeight: '100%',
+            objectFit: 'contain',
+          }}
+        />
+      ) : (
+        <span style={{ fontSize: '13px', color: '#999' }}>
+          Untitled Asset
+        </span>
+      )}
+
       <div style={{ position: 'absolute', top: '4px', right: '4px' }}>
         <Popover
           isOpen={isMenuOpen}
@@ -201,19 +221,32 @@ const App = () => {
     </div>
   );
 
+
   return (
     <div style={{ padding: 0, margin: 0, width: 'auto', overflow: 'visible' }}>
-      {!assetMeta && !bynderAsset && (
-        <Stack spacing="spacingS" alignItems="center" flexDirection="row" marginBottom="spacingS">
-          <Button size="small" onClick={openEntrySelector}>Add existing media</Button>
-          <Button size="small" onClick={openNewAsset}>Add new media</Button>
-          <Button size="small" onClick={openBynderDialog}>Import from Bynder</Button>
-        </Stack>
+      {!assetMeta && !bynderAsset && !loading && (
+        <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
+          <p style={{ color: '#666', fontSize: '14px', marginBottom: '0.5rem' }}>
+            No media selected
+          </p>
+          <Stack spacing="spacingS" alignItems="center" flexDirection="row" justifyContent="center">
+            <Button size="small" onClick={openEntrySelector}>Add existing media</Button>
+            <Button size="small" onClick={openNewAsset}>Add new media</Button>
+            <Button size="small" onClick={openBynderDialog}>Import from Bynder</Button>
+          </Stack>
+        </div>
       )}
 
       {loading && <Spinner size="large" style={{ marginTop: '1rem' }} />}
 
-      {assetMeta?.url && renderImagePreview(assetMeta.url)}
+      {assetMeta?.url ? renderImagePreview(assetMeta.url, assetMeta.title): null}
+      {assetMeta && !assetMeta.url &&
+        renderImagePreview(null, assetMeta.title, {
+          showReload: true,
+          onReload: () => fetchAssetMeta(assetMeta.id),
+        })
+      }
+      {/* {assetMeta && renderImagePreview(assetMeta.url || '', assetMeta.title)} */}
       {bynderAsset?.thumbnail && renderImagePreview(bynderAsset.thumbnail, bynderAsset.name)}
     </div>
   );
