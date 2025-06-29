@@ -9,6 +9,7 @@ import {
   Popover,
   IconButton,
   Spinner,
+  Stack,
 } from '@contentful/f36-components';
 import { MoreHorizontalIcon } from '@contentful/f36-icons';
 import { useRef, useState, useEffect } from 'react';
@@ -203,34 +204,11 @@ const App = () => {
   return (
     <div style={{ padding: 0, margin: 0, width: 'auto', overflow: 'visible' }}>
       {!assetMeta && !bynderAsset && (
-        <Popover
-          isOpen={isMenuOpen}
-          onClose={() => setIsMenuOpen(false)}
-          placement="bottom-start"
-        >
-          <Popover.Trigger>
-            <Button
-              variant="secondary"
-              onClick={() => setIsMenuOpen((open) => !open)}
-              ref={buttonRef}
-            >
-              + Add media ▾
-            </Button>
-          </Popover.Trigger>
-          <Popover.Content>
-            <Menu>
-              <MenuItem onClick={() => { setIsMenuOpen(false); openEntrySelector(); }}>
-                Add existing media
-              </MenuItem>
-              <MenuItem onClick={() => { setIsMenuOpen(false); openNewAsset(); }}>
-                Add new media
-              </MenuItem>
-              <MenuItem onClick={() => { setIsMenuOpen(false); openBynderDialog(); }}>
-                Import from Bynder
-              </MenuItem>
-            </Menu>
-          </Popover.Content>
-        </Popover>
+        <Stack spacing="spacingS" alignItems="center" flexDirection="row" marginBottom="spacingS">
+          <Button size="small" onClick={openEntrySelector}>Add existing media</Button>
+          <Button size="small" onClick={openNewAsset}>Add new media</Button>
+          <Button size="small" onClick={openBynderDialog}>Import from Bynder</Button>
+        </Stack>
       )}
 
       {loading && <Spinner size="large" style={{ marginTop: '1rem' }} />}
