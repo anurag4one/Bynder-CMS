@@ -143,6 +143,21 @@ const App = () => {
     setAssetMeta(null);
   };
 
+  const openAssetEditor = async (assetId: string) => {
+  try {
+    await sdk.navigator.openAsset(assetId, {
+      slideIn: true,
+      waitForClose: true,
+    });
+
+    // Optionally refresh the asset info after editing
+    fetchAssetMeta(assetId);
+  } catch (err) {
+    console.error('Failed to open asset editor:', err);
+    sdk.notifier.error('Unable to open asset editor.');
+  }
+};
+
   const renderImagePreview = (
     src: string | null,
     alt?: string,
@@ -214,6 +229,16 @@ const App = () => {
               <MenuItem onClick={() => { setIsMenuOpen(false); removeAsset(); }}>
                 Remove image
               </MenuItem>
+              {assetMeta?.id && (
+                <MenuItem
+                  onClick={() => {
+                    setIsMenuOpen(false);
+                    openAssetEditor(assetMeta.id);
+                  }}
+                >
+                  Edit image
+                </MenuItem>
+              )}
             </Menu>
           </Popover.Content>
         </Popover>
