@@ -20,9 +20,9 @@ const BynderDialog = () => {
   const fetchImages = async (search = '', offsetStart = 0) => {
     setLoading(true);
     try {
-      const searchParam = search ? `&name=${encodeURIComponent(search)}` : '';
+      const searchParam = search ? `&keyword=${encodeURIComponent(search)}` : '';
       const response = await fetch(
-        `${domain}/api/v4/media/?limit=${PAGE_SIZE}&offset=${offsetStart}${searchParam}`,
+        `${domain}/api/v4/media/?type=image&limit=${PAGE_SIZE}&offset=${offsetStart}${searchParam}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,

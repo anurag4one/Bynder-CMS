@@ -126,14 +126,14 @@ const App = () => {
     const result = await sdk.dialogs.openCurrentApp({
       width: 800,
       minHeight: 600,
-      title: 'Select Asset from Bynder',
+      title: 'Select Asset from Brand Portal',
     });
 
     if (result?.originalUrl) {
       sdk.field.setValue(result);
       setBynderAsset(result);
     } else {
-      sdk.notifier.error('No image selected from Bynder.');
+      sdk.notifier.error('No image selected from Brand Portal.');
     }
   };
 
@@ -224,7 +224,7 @@ const App = () => {
           <Popover.Content>
             <Menu>
               <MenuItem onClick={() => { setIsMenuOpen(false); openBynderDialog(); }}>
-                Replace image from bynder
+                Replace image from Brand Portal
               </MenuItem>
               <MenuItem onClick={() => { setIsMenuOpen(false); removeAsset(); }}>
                 Remove image
@@ -257,7 +257,7 @@ const App = () => {
           <Stack spacing="spacingS" alignItems="center" flexDirection="row" justifyContent="center">
             <Button size="small" onClick={openEntrySelector}>Add existing media</Button>
             <Button size="small" onClick={openNewAsset}>Add new media</Button>
-            <Button size="small" onClick={openBynderDialog}>Import from Bynder</Button>
+            <Button size="small" onClick={openBynderDialog}>Import from Brand Portal</Button>
           </Stack>
         </div>
       )}
