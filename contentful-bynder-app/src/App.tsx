@@ -77,7 +77,7 @@ useEffect(() => {
     }
   };
 
-  let assetCreationInitiated = false;
+  let assetCreated = false;
 
   const openNewAsset = async () => {
     console.log('Opening new asset slide-in...');
@@ -90,7 +90,7 @@ useEffect(() => {
 
     const assetId = result.entity.sys.id;
     console.log('[NewAsset] Created asset ID:', assetId); 
-    assetCreationInitiated = true;
+    assetCreated = true;
 
     try {
     // ⏳ Wait for asset to be fully processed and published
@@ -136,16 +136,16 @@ useEffect(() => {
     setAssetLink(link);
     await fetchAssetMeta(assetId);
 
+    if (assetCreated && assetId ){
+      location.reload();
+    }
+
     } catch (err) {
     console.error('[NewAsset] Failed:', err);
     }
   };
 
-  if (assetCreationInitiated){
-    location.reload();
-  }
-
-  const openBynderDialog = async () => {
+    const openBynderDialog = async () => {
     const result = await sdk.dialogs.openCurrentApp({
       width: 800,
       minHeight: 600,
