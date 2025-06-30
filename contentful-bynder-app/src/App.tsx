@@ -224,7 +224,7 @@ const App = () => {
           <Popover.Content>
             <Menu>
               <MenuItem onClick={() => { setIsMenuOpen(false); openBynderDialog(); }}>
-                Replace image
+                Replace image from bynder
               </MenuItem>
               <MenuItem onClick={() => { setIsMenuOpen(false); removeAsset(); }}>
                 Remove image
