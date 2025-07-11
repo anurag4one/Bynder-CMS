@@ -90,7 +90,7 @@ const BynderDialog = () => {
     <div style={{ padding: 16, height: '600px', display: 'flex', flexDirection: 'column' }}>
       <div style={{ marginBottom: 12, display: 'flex' }}>
         <TextInput
-          placeholder="Search images..."
+          placeholder="Search images...."
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
