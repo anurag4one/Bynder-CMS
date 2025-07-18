@@ -74,23 +74,24 @@ const BynderDialog = () => {
     fetchImages(query, 0);
   };
 
-  const selectImage = (img: any) => {
-    const thumbnail = img.thumbnails?.webimage;
-    const originalUrl = thumbnail;
+  const selectImage = (img: any) => {   // unifying
+  const thumbnail = img.thumbnail || img.thumbnails?.webimage;
+  const originalUrl = thumbnail;
 
-    sdk.close({
-      id: img.id,
-      name: img.name,
-      thumbnail,
-      originalUrl,
-    });
-  };
+  sdk.close({
+    type: 'bynder',
+    title: img.name || 'Untitled',
+    thumbnail,
+    originalUrl,
+  });
+};
+
 
   return (
     <div style={{ padding: 16, height: '600px', display: 'flex', flexDirection: 'column' }}>
       <div style={{ marginBottom: 12, display: 'flex' }}>
         <TextInput
-          placeholder="Search images...."
+          placeholder="Search images..."
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
@@ -171,4 +172,4 @@ const BynderDialog = () => {
   );
 };
 
-export default BynderDialog;
+export default BynderDialog; 
