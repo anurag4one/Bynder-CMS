@@ -29,6 +29,7 @@ const App = () => {
   const [loading, setLoading] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
+  const [reloadAttempts, setReloadAttempts] = useState(0);
 
   useEffect(() => {
     sdk.window.startAutoResizer();
@@ -67,6 +68,7 @@ const App = () => {
       if (asset) {
         sdk.field.setValue(asset);
         setValue(asset);
+        setReloadAttempts(0);
       }
     }
   };
@@ -80,7 +82,7 @@ const openNewCMSAsset = async () => {
 
   try {
     setLoading(true);
-    let attempts = 30;
+    let attempts = 10;
     let asset = null;
 
     while (attempts > 0) {
@@ -112,9 +114,10 @@ const openNewCMSAsset = async () => {
 
     sdk.field.setValue(unified);
     setValue(unified);
+    setReloadAttempts(0);
 
     if (!unified.thumbnail) {
-      sdk.notifier.warning('Asset created, but it is not ready yet.');
+      sdk.notifier.warning('Asset created, but it is not ready yet. Try reloading.');
     }
 
   } catch (err) {
@@ -124,9 +127,6 @@ const openNewCMSAsset = async () => {
     setLoading(false);
   }
 };
-
-
-
  
   const openBynderDialog = async () => {
     const result = await sdk.dialogs.openCurrentApp({
@@ -134,6 +134,7 @@ const openNewCMSAsset = async () => {
       minHeight: 600,
       title: 'Select Asset from Brand Portal',
     });
+    console.log('bynder response', result);
 
     if (result?.originalUrl) {
       const bynderAsset: UnifiedAsset = {
@@ -152,6 +153,7 @@ const openNewCMSAsset = async () => {
   const removeAsset = () => {
     sdk.field.removeValue();
     setValue(null);
+    setReloadAttempts(0);
   };
 
   const reloadCMSAsset = async () => {
@@ -160,6 +162,8 @@ const openNewCMSAsset = async () => {
       if (updated) {
         sdk.field.setValue(updated);
         setValue(updated);
+        setReloadAttempts(prev => prev + 1);
+        console.log('Reload clicked');
       }
     }
   };
@@ -170,11 +174,15 @@ const openNewCMSAsset = async () => {
         slideIn: true,
         waitForClose: true,
       });
+      setReloadAttempts(0);
       reloadCMSAsset();
     }
   };
 
 const renderImagePreview = (asset: UnifiedAsset) => {
+  const shouldShowReload = asset.type === 'cms' && !asset.thumbnail && reloadAttempts < 2;
+  const shouldShowEdit = asset.type === 'cms' && !asset.thumbnail && reloadAttempts >= 2;
+
   return (
     <div
       style={{
@@ -208,7 +216,7 @@ const renderImagePreview = (asset: UnifiedAsset) => {
       )}
 
       {/* 🔁 Show reload button if image not available */}
-      {asset.type === 'cms' && !asset.thumbnail && (
+      {/* {asset.type === 'cms' && !asset.thumbnail && (
         <Button
           size="small"
           variant="secondary"
@@ -217,7 +225,27 @@ const renderImagePreview = (asset: UnifiedAsset) => {
         >
           Reload to view media
         </Button>
-      )}
+      )} */}
+
+      
+     {shouldShowReload && (
+          <Button
+            size="small"
+            variant="secondary"
+            style={{ marginTop: '8px' }}
+            onClick={reloadCMSAsset}
+          >Reload to view media</Button>
+        )}
+
+      {shouldShowEdit && (
+          <Button
+            size="small"
+            variant="secondary"
+            style={{ marginTop: '8px' }}
+            onClick={openAssetEditor}
+          >Edit media</Button>
+        )}
+
 
       <div style={{ position: 'absolute', top: '4px', right: '4px' }}>
         <Popover
