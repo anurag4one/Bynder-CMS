@@ -1,4 +1,3 @@
-import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { SDKProvider, useSDK } from '@contentful/react-apps-toolkit';
 import App from './App';
