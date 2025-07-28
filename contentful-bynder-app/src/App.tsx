@@ -3,135 +3,148 @@ import {
   useFieldValue,
 } from '@contentful/react-apps-toolkit';
 import {
-  Menu,
-  MenuItem,
   Button,
-  Popover,
-  IconButton,
   Spinner,
   Stack,
+  IconButton,
+  Menu,
+  MenuItem,
+  Popover,
 } from '@contentful/f36-components';
 import { MoreHorizontalIcon } from '@contentful/f36-icons';
-import { useRef, useState, useEffect } from 'react';
-import type { FieldAppSDK, Link } from '@contentful/app-sdk';
+import { useEffect, useRef, useState } from 'react';
+import type { FieldAppSDK } from '@contentful/app-sdk';
+
+type UnifiedAsset = {
+  type: 'cms' | 'bynder';
+  id?: string;
+  title: string;
+  thumbnail: string;
+  originalUrl: string;
+};
 
 const App = () => {
   const sdk = useSDK<FieldAppSDK>();
-  const [assetLink, setAssetLink] = useFieldValue<Link>();
-  const [assetMeta, setAssetMeta] = useState<any>(null);
-  const [bynderAsset, setBynderAsset] = useState<any>(null);
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [value, setValue] = useFieldValue<UnifiedAsset>();
   const [loading, setLoading] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
+  const [reloadAttempts, setReloadAttempts] = useState(0);
 
   useEffect(() => {
     sdk.window.startAutoResizer();
   }, []);
 
-  const fetchAssetMeta = async (id: string) => {
+  const fetchCMSAsset = async (assetId: string): Promise<UnifiedAsset | null> => {
     try {
       setLoading(true);
-      const asset = await sdk.cma.asset.get({ assetId: id });
+      const asset = await sdk.cma.asset.get({ assetId });
       const locale = sdk.field.locale;
       const file = asset.fields.file?.[locale];
+      const title = asset.fields.title?.[locale] || 'Untitled Asset';
+      const thumbnail = file?.url ? `https:${file.url}` : '';
+      const originalUrl = file?.url ? `https:${file.url}` : '';
 
-      const thumbnailUrl = file?.url ? `https:${file.url}` : null;
-
-      // Always store the asset ID and optionally the URL
-      setAssetMeta({
-        id,
-        url: thumbnailUrl,
-        title: asset.fields?.title?.[locale] || 'Untitled Asset',
-        hasFile: !!thumbnailUrl,
-      });
+      return {
+        type: 'cms',
+        id: assetId,
+        title,
+        thumbnail,
+        originalUrl,
+      };
     } catch (err) {
-      console.error('[Asset Fetch Error]', err);
-      setAssetMeta(null);
+      console.error('[CMS Asset Fetch Error]', err);
+      sdk.notifier.error('Unable to fetch CMS asset.');
+      return null;
     } finally {
       setLoading(false);
     }
   };
 
-
-  useEffect(() => {
-    if (assetLink?.sys?.id) {
-      fetchAssetMeta(assetLink.sys.id);
-    } else {
-      setAssetMeta(null);
-    }
-  }, [assetLink]);
-
-  useEffect(() => {
-    const currentValue = sdk.field.getValue();
-    setBynderAsset(currentValue);
-
-    const detach = sdk.field.onValueChanged((newValue) => {
-      setBynderAsset(newValue);
-    });
-
-    return () => detach();
-  }, []);
-
-  const selectAsset = (id: string) => {
-    const link: Link = {
-      sys: {
-        type: 'Link',
-        linkType: 'Asset',
-        id,
-      },
-    };
-    fetchAssetMeta(id);
-    sdk.field.setValue(link);
-  };
-
-  const openEntrySelector = async () => {
+  const openCMSSelector = async () => {
     const result = await sdk.dialogs.selectSingleAsset();
     if (result?.sys?.id) {
-      try {
-        const asset = await sdk.cma.asset.get({ assetId: result.sys.id });
-        if (asset) {
-          selectAsset(result.sys.id);
-        }
-      } catch (err) {
-        console.error('Selected asset not found or inaccessible:', err);
-        sdk.notifier.error('Selected media not found or was deleted.');
+      const asset = await fetchCMSAsset(result.sys.id);
+      if (asset) {
+        sdk.field.setValue(asset);
+        setValue(asset);
+        setReloadAttempts(0);
       }
     }
   };
 
 
-  const openNewAsset = async () => {
-    const result = await sdk.navigator.openNewAsset({ slideIn: true });
-    const assetId = result?.entity?.sys?.id;
+const openNewCMSAsset = async () => {
+  const result = await sdk.navigator.openNewAsset({ slideIn: true });
+  const assetId = result?.entity?.sys?.id;
 
-    if (!assetId) {
-      console.log('Asset creation cancelled or not completed.');
-      return;
-    }
-      if (assetId) {
-        try {
-          const asset = await sdk.cma.asset.get({ assetId: assetId });
-          if (asset) {
-            selectAsset(assetId);
-          }
-        } catch (err) {
-          console.error('Selected asset not found or inaccessible:', err);
-          sdk.notifier.error('Selected media not found or was deleted.');
-        }
+  if (!assetId) return;
+
+  try {
+    setLoading(true);
+    let attempts = 10;
+    let asset = null;
+
+    while (attempts > 0) {
+      const fetched = await sdk.cma.asset.get({ assetId });
+      const file = fetched.fields?.file?.[sdk.field.locale];
+
+      if (file?.url) {
+        asset = fetched;
+        break;
       }
-  };
 
+      await new Promise((res) => setTimeout(res, 1000));
+      attempts--;
+    }
 
+    const fallbackTitle = 'Untitled Asset';
+
+    const unified: UnifiedAsset = {
+      type: 'cms',
+      id: assetId,
+      title: asset?.fields.title?.[sdk.field.locale] || fallbackTitle,
+      thumbnail: asset?.fields.file?.[sdk.field.locale]?.url
+        ? `https:${asset.fields.file[sdk.field.locale].url}`
+        : '',
+      originalUrl: asset?.fields.file?.[sdk.field.locale]?.url
+        ? `https:${asset.fields.file[sdk.field.locale].url}`
+        : '',
+    };
+
+    sdk.field.setValue(unified);
+    setValue(unified);
+    setReloadAttempts(0);
+
+    if (!unified.thumbnail) {
+      sdk.notifier.warning('Asset created, but it is not ready yet. Try reloading.');
+    }
+
+  } catch (err) {
+    console.error('[Error uploading new CMS asset]', err);
+    sdk.notifier.error('Failed to upload or fetch the new asset.');
+  } finally {
+    setLoading(false);
+  }
+};
+ 
   const openBynderDialog = async () => {
     const result = await sdk.dialogs.openCurrentApp({
       width: 800,
       minHeight: 600,
       title: 'Select Asset from Brand Portal',
     });
+    console.log('bynder response', result);
 
     if (result?.originalUrl) {
-      sdk.field.setValue(result);
-      setBynderAsset(result);
+      const bynderAsset: UnifiedAsset = {
+        type: 'bynder',
+        title: result.name || 'Bynder Asset',
+        thumbnail: result.thumbnail,
+        originalUrl: result.originalUrl,
+      };
+      sdk.field.setValue(bynderAsset);
+      setValue(bynderAsset);
     } else {
       sdk.notifier.error('No image selected from Brand Portal.');
     }
@@ -139,30 +152,38 @@ const App = () => {
 
   const removeAsset = () => {
     sdk.field.removeValue();
-    setBynderAsset(null);
-    setAssetMeta(null);
+    setValue(null);
+    setReloadAttempts(0);
   };
 
-  const openAssetEditor = async (assetId: string) => {
-  try {
-    await sdk.navigator.openAsset(assetId, {
-      slideIn: true,
-      waitForClose: true,
-    });
+  const reloadCMSAsset = async () => {
+    if (value?.type === 'cms' && value.id) {
+      const updated = await fetchCMSAsset(value.id);
+      if (updated) {
+        sdk.field.setValue(updated);
+        setValue(updated);
+        setReloadAttempts(prev => prev + 1);
+        console.log('Reload clicked');
+      }
+    }
+  };
 
-    // Optionally refresh the asset info after editing
-    fetchAssetMeta(assetId);
-  } catch (err) {
-    console.error('Failed to open asset editor:', err);
-    sdk.notifier.error('Unable to open asset editor.');
-  }
-};
+  const openAssetEditor = async () => {
+    if (value?.type === 'cms' && value.id) {
+      await sdk.navigator.openAsset(value.id, {
+        slideIn: true,
+        waitForClose: true,
+      });
+      setReloadAttempts(0);
+      reloadCMSAsset();
+    }
+  };
 
-  const renderImagePreview = (
-    src: string | null,
-    alt?: string,
-    options?: { showReload?: boolean; onReload?: () => void }
-  ) => (
+const renderImagePreview = (asset: UnifiedAsset) => {
+  const shouldShowReload = asset.type === 'cms' && !asset.thumbnail && reloadAttempts < 2;
+  const shouldShowEdit = asset.type === 'cms' && !asset.thumbnail && reloadAttempts >= 2;
+
+  return (
     <div
       style={{
         width: 240,
@@ -180,21 +201,10 @@ const App = () => {
         textAlign: 'center',
       }}
     >
-      {options?.showReload && options?.onReload && (
-        <Button
-          size="small"
-          variant="secondary"
-          onClick={options.onReload}
-          style={{ marginBottom: '0.5rem' }}
-        >
-          🔄 Reload
-        </Button>
-      )}
-
-      {src ? (
+      {asset.thumbnail ? (
         <img
-          src={src}
-          alt={alt || 'Selected Image'}
+          src={asset.thumbnail}
+          alt={asset.title}
           style={{
             maxWidth: '100%',
             maxHeight: '100%',
@@ -202,10 +212,40 @@ const App = () => {
           }}
         />
       ) : (
-        <span style={{ fontSize: '13px', color: '#999' }}>
-          Untitled Asset
-        </span>
+        <span style={{ fontSize: '13px', color: '#999' }}>{asset.title}</span>
       )}
+
+      {/* 🔁 Show reload button if image not available */}
+      {/* {asset.type === 'cms' && !asset.thumbnail && (
+        <Button
+          size="small"
+          variant="secondary"
+          style={{ marginTop: '8px' }}
+          onClick={reloadCMSAsset}
+        >
+          Reload to view media
+        </Button>
+      )} */}
+
+      
+     {shouldShowReload && (
+          <Button
+            size="small"
+            variant="secondary"
+            style={{ marginTop: '8px' }}
+            onClick={reloadCMSAsset}
+          >Reload to view media</Button>
+        )}
+
+      {shouldShowEdit && (
+          <Button
+            size="small"
+            variant="secondary"
+            style={{ marginTop: '8px' }}
+            onClick={openAssetEditor}
+          >Edit media</Button>
+        )}
+
 
       <div style={{ position: 'absolute', top: '4px', right: '4px' }}>
         <Popover
@@ -224,39 +264,40 @@ const App = () => {
           <Popover.Content>
             <Menu>
               <MenuItem onClick={() => { setIsMenuOpen(false); openBynderDialog(); }}>
-                Replace image from Brand Portal
+                Replace with Bynder asset
               </MenuItem>
-              <MenuItem onClick={() => { setIsMenuOpen(false); removeAsset(); }}>
-                Remove image
+              <MenuItem onClick={() => { setIsMenuOpen(false); openCMSSelector(); }}>
+                Replace with CMS asset
               </MenuItem>
-              {assetMeta?.id && (
-                <MenuItem
-                  onClick={() => {
-                    setIsMenuOpen(false);
-                    openAssetEditor(assetMeta.id);
-                  }}
-                >
-                  Edit image
+              {asset.type === 'cms' && (
+                <MenuItem onClick={() => { setIsMenuOpen(false); openAssetEditor(); }}>
+                  Edit CMS asset
                 </MenuItem>
               )}
+              {asset.type === 'cms' && (
+                <MenuItem onClick={() => { setIsMenuOpen(false); reloadCMSAsset(); }}>
+                  Reload CMS asset
+                </MenuItem>
+              )}
+              <MenuItem onClick={() => { setIsMenuOpen(false); removeAsset(); }}>
+                Remove asset
+              </MenuItem>
             </Menu>
           </Popover.Content>
         </Popover>
       </div>
     </div>
   );
+};
 
 
   return (
-    <div style={{ padding: 0, margin: 0, width: 'auto', overflow: 'visible' }}>
-      {!assetMeta && !bynderAsset && !loading && (
+    <div style={{ padding: 0, margin: 0 }}>
+      {!value && !loading && (
         <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
-          <p style={{ color: '#666', fontSize: '14px', marginBottom: '0.5rem' }}>
-            No media selected
-          </p>
           <Stack spacing="spacingS" alignItems="center" flexDirection="row" justifyContent="center">
-            <Button size="small" onClick={openEntrySelector}>Add existing media</Button>
-            <Button size="small" onClick={openNewAsset}>Add new media</Button>
+            <Button size="small" onClick={openCMSSelector}>Add existing media</Button>
+            <Button size="small" onClick={openNewCMSAsset}>Add new media</Button>
             <Button size="small" onClick={openBynderDialog}>Import from Brand Portal</Button>
           </Stack>
         </div>
@@ -264,17 +305,9 @@ const App = () => {
 
       {loading && <Spinner size="large" style={{ marginTop: '1rem' }} />}
 
-      {assetMeta?.url ? renderImagePreview(assetMeta.url, assetMeta.title): null}
-      {assetMeta && !assetMeta.url &&
-        renderImagePreview(null, assetMeta.title, {
-          showReload: true,
-          onReload: () => fetchAssetMeta(assetMeta.id),
-        })
-      }
-      {/* {assetMeta && renderImagePreview(assetMeta.url || '', assetMeta.title)} */}
-      {bynderAsset?.thumbnail && renderImagePreview(bynderAsset.thumbnail, bynderAsset.name)}
+      {value && renderImagePreview(value)}
     </div>
   );
 };
 
-export default App;
+export default App; 
