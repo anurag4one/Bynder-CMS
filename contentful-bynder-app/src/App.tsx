@@ -12,7 +12,7 @@ import {
   Popover,
 } from '@contentful/f36-components';
 import { MoreHorizontalIcon } from '@contentful/f36-icons';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { FieldAppSDK } from '@contentful/app-sdk';
 
 type UnifiedAsset = {
@@ -28,7 +28,6 @@ const App = () => {
   const [value, setValue] = useFieldValue<UnifiedAsset>();
   const [loading, setLoading] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const buttonRef = useRef<HTMLButtonElement>(null);
   const [reloadAttempts, setReloadAttempts] = useState(0);
 
   useEffect(() => {
@@ -63,8 +62,8 @@ const App = () => {
 
   const openCMSSelector = async () => {
     const result = await sdk.dialogs.selectSingleAsset();
-    if (result?.sys?.id) {
-      const asset = await fetchCMSAsset(result.sys.id);
+    if ((result as any)?.sys?.id) {
+      const asset = await fetchCMSAsset((result as any)?.sys.id);
       if (asset) {
         sdk.field.setValue(asset);
         setValue(asset);
@@ -134,7 +133,6 @@ const openNewCMSAsset = async () => {
       minHeight: 600,
       title: 'Select Asset from Brand Portal',
     });
-    console.log('bynder response', result);
 
     if (result?.originalUrl) {
       const bynderAsset: UnifiedAsset = {
@@ -152,7 +150,7 @@ const openNewCMSAsset = async () => {
 
   const removeAsset = () => {
     sdk.field.removeValue();
-    setValue(null);
+    setValue(undefined);
     setReloadAttempts(0);
   };
 
@@ -163,7 +161,6 @@ const openNewCMSAsset = async () => {
         sdk.field.setValue(updated);
         setValue(updated);
         setReloadAttempts(prev => prev + 1);
-        console.log('Reload clicked');
       }
     }
   };
@@ -172,7 +169,6 @@ const openNewCMSAsset = async () => {
     if (value?.type === 'cms' && value.id) {
       await sdk.navigator.openAsset(value.id, {
         slideIn: true,
-        waitForClose: true,
       });
       setReloadAttempts(0);
       reloadCMSAsset();
@@ -214,19 +210,6 @@ const renderImagePreview = (asset: UnifiedAsset) => {
       ) : (
         <span style={{ fontSize: '13px', color: '#999' }}>{asset.title}</span>
       )}
-
-      {/* 🔁 Show reload button if image not available */}
-      {/* {asset.type === 'cms' && !asset.thumbnail && (
-        <Button
-          size="small"
-          variant="secondary"
-          style={{ marginTop: '8px' }}
-          onClick={reloadCMSAsset}
-        >
-          Reload to view media
-        </Button>
-      )} */}
-
       
      {shouldShowReload && (
           <Button
@@ -255,7 +238,11 @@ const renderImagePreview = (asset: UnifiedAsset) => {
         >
           <Popover.Trigger>
             <IconButton
-              variant="transparent"
+              // variant="transparent"
+              variant="outline" // or "outline", if "ghost" is too subtle
+              style={{
+                backgroundColor: 'white', // optional subtle border (gray-200)
+              }}
               icon={<MoreHorizontalIcon />}
               aria-label="Options"
               onClick={() => setIsMenuOpen((prev) => !prev)}

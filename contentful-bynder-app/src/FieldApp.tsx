@@ -13,7 +13,7 @@ type UnifiedAsset = {
 
 const FieldApp = () => {
   const sdk = useSDK<FieldAppSDK>();
-  const [asset, setAsset] = useFieldValue<UnifiedAsset | null>();
+  const [, setAsset] = useFieldValue<UnifiedAsset | null>();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
 
@@ -42,8 +42,8 @@ const FieldApp = () => {
 
   const openEntrySelector = async () => {
     const result = await sdk.dialogs.selectSingleAsset();
-    if (result?.sys?.id) {
-      const unifiedAsset = await fetchCMSAsset(result.sys.id);
+    if ((result as any)?.sys?.id) {
+      const unifiedAsset = await fetchCMSAsset((result as any)?.sys.id);
       if (unifiedAsset) {
         setAsset(unifiedAsset);
       }

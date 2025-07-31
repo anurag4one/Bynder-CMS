@@ -14,6 +14,7 @@
     "@contentful/f36-components": "^4.80.4",
     "@contentful/f36-icons": "^4.29.1",
     "@contentful/f36-tokens": "^4.2.0",
+    "@contentful/forma-36-react-components": "^3.100.7",
     "@contentful/react-apps-toolkit": "^1.2.16",
     "react": "^19.1.0",
     "react-dom": "^19.1.0"
