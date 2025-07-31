@@ -210,19 +210,6 @@ const renderImagePreview = (asset: UnifiedAsset) => {
       ) : (
         <span style={{ fontSize: '13px', color: '#999' }}>{asset.title}</span>
       )}
-
-      {/* 🔁 Show reload button if image not available */}
-      {/* {asset.type === 'cms' && !asset.thumbnail && (
-        <Button
-          size="small"
-          variant="secondary"
-          style={{ marginTop: '8px' }}
-          onClick={reloadCMSAsset}
-        >
-          Reload to view media
-        </Button>
-      )} */}
-
       
      {shouldShowReload && (
           <Button
@@ -251,7 +238,11 @@ const renderImagePreview = (asset: UnifiedAsset) => {
         >
           <Popover.Trigger>
             <IconButton
-              variant="transparent"
+              // variant="transparent"
+              variant="outline" // or "outline", if "ghost" is too subtle
+              style={{
+                backgroundColor: 'white', // optional subtle border (gray-200)
+              }}
               icon={<MoreHorizontalIcon />}
               aria-label="Options"
               onClick={() => setIsMenuOpen((prev) => !prev)}
