@@ -9,6 +9,7 @@ const BynderDialog = () => {
   const sdk = useSDK<DialogAppSDK>();
   const token = sdk.parameters.instance.bynderToken;
   const domain = sdk.parameters.instance.bynderDomain;
+  const [errorMessage, setErrorMessage] = useState('');
 
   const [query, setQuery] = useState('');
   const [images, setImages] = useState<any[]>([]);
@@ -19,6 +20,7 @@ const BynderDialog = () => {
 
   const fetchImages = async (search = '', pageNum = 1, shouldAppend = true) => {
     setLoading(true);
+    setErrorMessage('');
     try {
       const searchParam = search ? `&keyword=${encodeURIComponent(search)}` : '';
       const response = await fetch(
@@ -29,6 +31,18 @@ const BynderDialog = () => {
           },
         }
       );
+
+      if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          sdk.notifier.error("Authentication failed. Please check your connection or contact support.");
+        } else if (response.status === 429) {
+          sdk.notifier.error("Too many requests. Please wait for 5 minutes and try again.");
+        } else if (response.status >= 500) {
+          sdk.notifier.error("Unable to fetch assets right now. Please try again shortly or contact CMS admin to process your request.");
+        } else {
+          sdk.notifier.error("An unexpected error occurred while fetching assets.");
+        }
+    }
 
       const data = await response.json();
       const newImages = Array.isArray(data) ? data : [];
@@ -45,8 +59,8 @@ const BynderDialog = () => {
       // Check if we have more data
       setHasMore(newImages.length === PAGE_SIZE);
       
-    } catch (e) {
-      console.error('❌ Error fetching Bynder assets:', e);
+    } catch (err: any) {
+      console.error('❌ Error fetching Bynder assets:', err);
       setHasMore(false);
     } finally {
       setLoading(false);
@@ -116,6 +130,26 @@ const BynderDialog = () => {
           Search
         </Button>
       </div>
+
+      {errorMessage && (
+  <div
+    style={{
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      backgroundColor: '#fdecea',
+      color: '#b71c1c',
+      padding: '10px 14px',
+      borderRadius: '6px',
+      border: '1px solid #f5c6cb',
+      marginBottom: '12px',
+      fontSize: '14px',
+      boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+    }}
+  >
+    <span>{errorMessage}</span>
+  </div>
+)}
 
       <div
         ref={listRef}
