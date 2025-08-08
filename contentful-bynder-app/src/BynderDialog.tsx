@@ -9,7 +9,6 @@ const BynderDialog = () => {
   const sdk = useSDK<DialogAppSDK>();
   const token = sdk.parameters.instance.bynderToken;
   const domain = sdk.parameters.instance.bynderDomain;
-  const [errorMessage, setErrorMessage] = useState('');
 
   const [query, setQuery] = useState('');
   const [images, setImages] = useState<any[]>([]);
@@ -20,7 +19,6 @@ const BynderDialog = () => {
 
   const fetchImages = async (search = '', pageNum = 1, shouldAppend = true) => {
     setLoading(true);
-    setErrorMessage('');
     try {
       const searchParam = search ? `&keyword=${encodeURIComponent(search)}` : '';
       const response = await fetch(
@@ -130,26 +128,6 @@ const BynderDialog = () => {
           Search
         </Button>
       </div>
-
-      {errorMessage && (
-  <div
-    style={{
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      backgroundColor: '#fdecea',
-      color: '#b71c1c',
-      padding: '10px 14px',
-      borderRadius: '6px',
-      border: '1px solid #f5c6cb',
-      marginBottom: '12px',
-      fontSize: '14px',
-      boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
-    }}
-  >
-    <span>{errorMessage}</span>
-  </div>
-)}
 
       <div
         ref={listRef}
