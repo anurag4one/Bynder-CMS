@@ -30,6 +30,18 @@ const BynderDialog = () => {
         }
       );
 
+      if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          sdk.notifier.error("Authentication failed. Please check your connection or contact support.");
+        } else if (response.status === 429) {
+          sdk.notifier.error("Too many requests. Please wait for 5 minutes and try again.");
+        } else if (response.status >= 500) {
+          sdk.notifier.error("Unable to fetch assets right now. Please try again shortly or contact CMS admin to process your request.");
+        } else {
+          sdk.notifier.error("An unexpected error occurred while fetching assets.");
+        }
+    }
+
       const data = await response.json();
       const newImages = Array.isArray(data) ? data : [];
 
@@ -45,8 +57,8 @@ const BynderDialog = () => {
       // Check if we have more data
       setHasMore(newImages.length === PAGE_SIZE);
       
-    } catch (e) {
-      console.error('❌ Error fetching Bynder assets:', e);
+    } catch (err: any) {
+      console.error('❌ Error fetching Bynder assets:', err);
       setHasMore(false);
     } finally {
       setLoading(false);

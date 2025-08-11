@@ -143,9 +143,10 @@ const openNewCMSAsset = async () => {
       };
       sdk.field.setValue(bynderAsset);
       setValue(bynderAsset);
-    } else {
-      sdk.notifier.error('No image selected from Brand Portal.');
     }
+      //  else {
+    //   sdk.notifier.error('No image selected from Brand Portal.');
+    // }
   };
 
   const removeAsset = () => {
