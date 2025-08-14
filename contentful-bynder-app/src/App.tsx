@@ -130,7 +130,7 @@ const openNewCMSAsset = async () => {
   const openBynderDialog = async () => {
     const result = await sdk.dialogs.openCurrentApp({
       width: 800,
-      minHeight: 600,
+      minHeight: 620,
       title: 'Select Asset from Brand Portal',
     });
 
@@ -144,9 +144,6 @@ const openNewCMSAsset = async () => {
       sdk.field.setValue(bynderAsset);
       setValue(bynderAsset);
     }
-      //  else {
-    //   sdk.notifier.error('No image selected from Brand Portal.');
-    // }
   };
 
   const removeAsset = () => {
@@ -183,8 +180,8 @@ const renderImagePreview = (asset: UnifiedAsset) => {
   return (
     <div
       style={{
-        width: 240,
-        height: 160,
+        width: 300,
+        height: 200,
         position: 'relative',
         border: '1px solid #d3dce0',
         borderRadius: '4px',
@@ -242,7 +239,7 @@ const renderImagePreview = (asset: UnifiedAsset) => {
               // variant="transparent"
               variant="outline" // or "outline", if "ghost" is too subtle
               style={{
-                backgroundColor: 'white', // optional subtle border (gray-200)
+                backgroundColor: 'white', 
               }}
               icon={<MoreHorizontalIcon />}
               aria-label="Options"
@@ -252,7 +249,7 @@ const renderImagePreview = (asset: UnifiedAsset) => {
           <Popover.Content>
             <Menu>
               <MenuItem onClick={() => { setIsMenuOpen(false); openBynderDialog(); }}>
-                Replace with Bynder asset
+                Replace with Brand Portal asset
               </MenuItem>
               <MenuItem onClick={() => { setIsMenuOpen(false); openCMSSelector(); }}>
                 Replace with CMS asset

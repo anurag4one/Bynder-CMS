@@ -116,7 +116,7 @@ const BynderDialog = () => {
   };
 
   return (
-    <div style={{ padding: 16, height: '600px', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ padding: 16, height: '570px', display: 'flex', flexDirection: 'column' }}>
       <div style={{ marginBottom: 12, display: 'flex' }}>
         <TextInput
           placeholder="Search images..."
