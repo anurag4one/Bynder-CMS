@@ -116,8 +116,8 @@ const BynderDialog = () => {
   };
 
   return (
-    <div style={{ padding: 16, height: '570px', display: 'flex', flexDirection: 'column' }}>
-      <div style={{ marginBottom: 12, display: 'flex' }}>
+    <div style={{ padding: 5, height: '570px', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ marginBottom: 12, display: 'flex', padding: '0px 5px'}}>
         <TextInput
           placeholder="Search images..."
           value={query}
@@ -134,9 +134,9 @@ const BynderDialog = () => {
         style={{
           flex: 1,
           overflowY: 'auto',
-          border: '1px solid #ccc',
+          // border: '1px solid #ccc',
           borderRadius: 4,
-          padding: 8,
+          padding: 0,
           height: '100%',
           minHeight: 200,
         }}
@@ -150,7 +150,7 @@ const BynderDialog = () => {
             style={{
               display: 'grid',
               gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))',
-              gap: '12px',
+              gap: '8px',
             }}
           >
             {images.map((img, i) => (
@@ -164,7 +164,7 @@ const BynderDialog = () => {
                   padding: '6px',
                   textAlign: 'center',
                   backgroundColor: '#fff',
-                  boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                  // boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
                   transition: 'box-shadow 0.2s ease',
                 }}
                 onMouseEnter={(e) => {
@@ -183,6 +183,7 @@ const BynderDialog = () => {
                     objectFit: 'cover',
                     borderRadius: '4px',
                     marginBottom: '6px',
+                    backgroundColor: '#eaeaea',
                   }}
                   onError={(e) => {
                     e.currentTarget.style.display = 'none';
@@ -212,7 +213,7 @@ const BynderDialog = () => {
         
         {!loading && !hasMore && images.length > 0 && (
           <div style={{ padding: 12, textAlign: 'center', color: '#999' }}>
-            No more images to load
+            No more images to show.
           </div>
         )}
       </div>
