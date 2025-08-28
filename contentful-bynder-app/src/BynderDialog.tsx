@@ -174,21 +174,54 @@ const BynderDialog = () => {
                   e.currentTarget.style.boxShadow = '0 1px 2px rgba(0,0,0,0.05)';
                 }}
               >
-                <img
+                {/* <img
                   src={img.thumbnail || img.thumbnails?.webimage}
                   alt={img.name}
                   style={{
                     width: '100%',
-                    height: '80px',
+                    height: '60px',
                     objectFit: 'cover',
-                    borderRadius: '4px',
-                    marginBottom: '6px',
-                    backgroundColor: '#eaeaea',
+                    borderRadius: '3px',
+                    marginBottom: '4px',
+                    backgroundColor: '#f3f3f3',
                   }}
                   onError={(e) => {
                     e.currentTarget.style.display = 'none';
                   }}
-                />
+                /> */}
+
+                  <div
+                    style={{
+                      width: '100%',
+                      height: '80px',
+                      borderRadius: '4px',
+                      marginBottom: '6px',
+                      backgroundImage: `
+                        linear-gradient(45deg, #eeeeee 25%, transparent 25%),
+                        linear-gradient(-45deg, #eeeeee 25%, transparent 25%),
+                        linear-gradient(45deg, transparent 75%, #eeeeee 75%),
+                        linear-gradient(-45deg, transparent 75%, #eeeeee 75%)
+                      `,
+                      backgroundColor: '#cccccc',
+                      backgroundSize: '8px 8px',
+                      backgroundPosition: '0 0, 0 4px, 4px -4px, -4px 0px',
+                      overflow: 'hidden'
+                    }}
+                  >
+                    <img
+                      src={img.thumbnail || img.thumbnails?.webimage}
+                      alt={img.name}
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover',
+                      }}
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                      }}
+                    />
+                  </div>
+
                 <div
                   style={{
                     fontSize: '12px',
