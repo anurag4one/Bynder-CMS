@@ -149,7 +149,7 @@ const BynderDialog = () => {
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))',
               gap: '8px',
             }}
           >
@@ -174,69 +174,57 @@ const BynderDialog = () => {
                   e.currentTarget.style.boxShadow = '0 1px 2px rgba(0,0,0,0.05)';
                 }}
               >
-                {/* <img
-                  src={img.thumbnail || img.thumbnails?.webimage}
-                  alt={img.name}
-                  style={{
-                    width: '100%',
-                    height: '60px',
-                    objectFit: 'cover',
-                    borderRadius: '3px',
-                    marginBottom: '4px',
-                    backgroundColor: '#f3f3f3',
-                  }}
-                  onError={(e) => {
-                    e.currentTarget.style.display = 'none';
-                  }}
-                /> */}
-
-                  <div
-                    style={{
-                      width: '100%',
-                      height: '80px',
-                      borderRadius: '4px',
-                      marginBottom: '6px',
-                      backgroundImage: `
-                        linear-gradient(45deg, #eeeeee 25%, transparent 25%),
-                        linear-gradient(-45deg, #eeeeee 25%, transparent 25%),
-                        linear-gradient(45deg, transparent 75%, #eeeeee 75%),
-                        linear-gradient(-45deg, transparent 75%, #eeeeee 75%)
-                      `,
-                      backgroundColor: '#cccccc',
-                      backgroundSize: '8px 8px',
-                      backgroundPosition: '0 0, 0 4px, 4px -4px, -4px 0px',
-                      overflow: 'hidden'
-                    }}
-                  >
-                    <img
-                      src={img.thumbnail || img.thumbnails?.webimage}
-                      alt={img.name}
-                      style={{
-                        width: '100%',
-                        height: '100%',
-                        objectFit: 'cover',
-                      }}
-                      onError={(e) => {
-                        e.currentTarget.style.display = 'none';
-                      }}
-                    />
-                  </div>
-
-                <div
-                  style={{
-                    fontSize: '12px',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                  }}
-                  title={img.name}
-                >
-                  {img.name}
-                </div>
-              </div>
-            ))}
+              <div
+                style={{
+                  width: '100%',
+                  height: '100px',
+                  borderRadius: '4px',
+                  marginBottom: '6px',
+                  backgroundColor: '#cccccc',
+                  backgroundImage: `
+                    linear-gradient(45deg, #eeeeee 25%, transparent 25%),
+                    linear-gradient(-45deg, #eeeeee 25%, transparent 25%),
+                    linear-gradient(45deg, transparent 75%, #eeeeee 75%),
+                    linear-gradient(-45deg, transparent 75%, #eeeeee 75%)
+                  `,
+                  backgroundSize: '12px 12px',
+                  backgroundPosition: '0 0, 0 6px, 6px -6px, -6px 0px',
+                  overflow: 'hidden',
+                  display: 'flex',
+                  alignItems: 'center',    
+                  justifyContent: 'center' 
+                }}
+              >
+              <img
+                src={img.thumbnail || img.thumbnails?.webimage}
+                alt={img.name}
+                style={{
+                  maxWidth: '100%',       // Changed from width
+                  maxHeight: '100%',      // Changed from height
+                  objectFit: 'contain',   // Changed from cover
+                  height: 'auto',         // Added
+                  width: 'auto',          // Added
+                }}
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                }}
+              />
+            </div>
+            <div
+              style={{
+                fontSize: '12px',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
+              title={img.name}
+              >
+            {img.name}
+            </div>
           </div>
-        )}
+        ))}
+      </div>
+    )}
 
         {loading && (
           <div style={{ padding: 12, textAlign: 'center' }}>

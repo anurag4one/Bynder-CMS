@@ -210,8 +210,10 @@ const renderImagePreview = (asset: UnifiedAsset) => {
               linear-gradient(45deg, transparent 75%, #eeeeee 75%),
               linear-gradient(-45deg, transparent 75%, #eeeeee 75%)
             `,
-            backgroundSize: '8px 8px',
-            backgroundPosition: '0 0, 0 4px, 4px -4px, -4px 0px',
+            backgroundSize: '12px 12px',
+            backgroundPosition: '0 0, 0 6px, 6px -6px, -6px 0px',
+            height: 'auto',
+            width: 'auto',
           }}
         />
       ) : (
@@ -248,7 +250,9 @@ const renderImagePreview = (asset: UnifiedAsset) => {
               // variant="transparent"
               variant="outline" // or "outline", if "ghost" is too subtle
               style={{
-                backgroundColor: 'white', 
+                backgroundColor: 'white',
+                borderColor: '#f1f1f1',
+                boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
               }}
               icon={<MoreHorizontalIcon />}
               aria-label="Options"
